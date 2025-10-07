@@ -34,14 +34,12 @@ describe("My Token", () => {
       );
     });
   });
-
   describe("Mint", () => {
     it("should return 1MT balance for signer 0", async () => {
       const signer0 = signers[0];
       expect(await myTokenC.balanceOf(signer0)).equal(100n * 10n ** 18n);
     });
   });
-
   describe("transfer", () => {
     it("should have 0.5MT", async () => {
       const signer0 = signers[0];
@@ -58,11 +56,9 @@ describe("My Token", () => {
           signer1.address,
           hre.ethers.parseUnits("0.5", decimals)
         );
-
       expect(await myTokenC.balanceOf(signer1.address)).equal(
         hre.ethers.parseUnits("0.5", decimals)
       );
-
       const filter = {
         address: await myTokenC.getAddress(),
         topics: [hre.ethers.id("Transfer(address,address,uint256)")],
@@ -84,6 +80,46 @@ describe("My Token", () => {
           signer1.address
         )
       ).to.be.revertedWith("insufficient balance");
+    });
+  });
+  describe("TransferFrom", () => {
+    it("should approve, transferFrom, and check balances", async () => {
+      const signer0 = signers[0];
+      const signer1 = signers[1];
+
+      await expect(
+        myTokenC
+          .connect(signer0)
+          .approve(signer1.address, hre.ethers.parseUnits("10", decimals))
+      )
+        .to.emit(myTokenC, "Approval")
+        .withArgs(
+          signer0.address,
+          signer1.address,
+          hre.ethers.parseUnits("10", decimals)
+        );
+
+      await expect(
+        myTokenC
+          .connect(signer1)
+          .transferFrom(
+            signer0.address,
+            signer1.address,
+            hre.ethers.parseUnits("5", decimals)
+          )
+      )
+        .to.emit(myTokenC, "Transfer")
+        .withArgs(
+          signer0.address,
+          signer1.address,
+          hre.ethers.parseUnits("5", decimals)
+        );
+
+      const balance0 = await myTokenC.balanceOf(signer0.address);
+      const balance1 = await myTokenC.balanceOf(signer1.address);
+
+      expect(balance0).equal(hre.ethers.parseUnits("95", decimals));
+      expect(balance1).equal(hre.ethers.parseUnits("5", decimals));
     });
   });
 });
